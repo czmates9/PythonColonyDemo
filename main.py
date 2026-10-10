@@ -161,11 +161,11 @@ for index, (
 print(f"Detected circles: {len(accepted_circles)}")
 
 cv2.imwrite(
-    "images/enhanced.jpg",
+    "output/enhanced.jpg",
     enhanced
 )
 
 cv2.imwrite(
-    "images/circles_local_contrast.jpg",
+    "output/circles_local_contrast.jpg",
     result_image
 )
