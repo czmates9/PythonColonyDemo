@@ -1,7 +1,18 @@
 from pathlib import Path
+from dataclasses import dataclass
 
 import cv2
 import numpy as np
+
+
+@dataclass
+class CircleCandidate:
+    x: int
+    y: int
+    radius: int
+    inside_brightness: float
+    surrounding_brightness: float
+    contrast: float
 
 
 def load_image(image_path: Path) -> np.ndarray:
@@ -104,13 +115,13 @@ def calculate_circle_brightness(
 def filter_candidates(
     roi: np.ndarray,
     circles: np.ndarray | None
-) -> list[tuple[int, int, int, float, float, float]]:
+) -> list[CircleCandidate]:
     if circles is None:
         return []
 
     detected_circles = np.round(circles[0]).astype(int)
 
-    accepted_circles = []
+    accepted_circles: list[CircleCandidate] = []
 
     for x, y, radius in detected_circles:
         inside_brightness, surrounding_brightness, contrast = (
@@ -131,13 +142,13 @@ def filter_candidates(
 
         if inside_brightness >= 150 and contrast >= 10:
             accepted_circles.append(
-                (
-                    x,
-                    y,
-                    radius,
-                    inside_brightness,
-                    surrounding_brightness,
-                    contrast
+                CircleCandidate(
+                    x=x,
+                    y=y,
+                    radius=radius,
+                    inside_brightness=inside_brightness,
+                    surrounding_brightness=surrounding_brightness,
+                    contrast=contrast
                 )
             )
 
@@ -146,29 +157,22 @@ def filter_candidates(
 
 def draw_results(
     image: np.ndarray,
-    circles: list[tuple[int, int, int, float, float, float]]
+    circles: list[CircleCandidate]
 ) -> np.ndarray:
     result_image = image.copy()
 
-    for index, (
-        x,
-        y,
-        radius,
-        inside_brightness,
-        surrounding_brightness,
-        contrast
-    ) in enumerate(circles, start=1):
+    for index, circle in enumerate(circles, start=1):
         cv2.circle(
             result_image,
-            (x, y),
-            radius,
+            (circle.x, circle.y),
+            circle.radius,
             (0, 255, 0),
             3
         )
 
         cv2.circle(
             result_image,
-            (x, y),
+            (circle.x, circle.y),
             3,
             (0, 0, 255),
             -1
@@ -177,7 +181,7 @@ def draw_results(
         cv2.putText(
             result_image,
             str(index),
-            (x + radius, y),
+            (circle.x + circle.radius, circle.y),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.6,
             (0, 0, 255),
@@ -186,10 +190,11 @@ def draw_results(
 
         print(
             f"Accepted #{index}: "
-            f"x={x}, y={y}, r={radius}, "
-            f"inside={inside_brightness:.1f}, "
-            f"around={surrounding_brightness:.1f}, "
-            f"contrast={contrast:.1f}"
+            f"x={circle.x}, y={circle.y}, "
+            f"r={circle.radius}, "
+            f"inside={circle.inside_brightness:.1f}, "
+            f"around={circle.surrounding_brightness:.1f}, "
+            f"contrast={circle.contrast:.1f}"
         )
 
     return result_image
